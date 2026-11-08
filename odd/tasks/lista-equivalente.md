@@ -52,13 +52,15 @@ construye, no lo que se evita.
 
 | ID | Specs | Ruta | Commit |
 |---|---|---|---|
-| T1 | S7, S8 | Bootstrap del módulo, `.gitignore`, documento y rama | `chore: bootstrap shopping-list-comparator` |
-| T2 | S3, S5, S9, S10 | `internal/identity` (marcas, dominio, ejes, tamaño, niveles) + tests del corpus | `feat(identity): motor de equivalencia con marcas propias y ejes tipados` |
-| T3 | S8 | `internal/catalog` cliente HTTP de multisuper + test con servidor falso | `feat(catalog): cliente del motor de catálogo de multisuper` |
-| T4 | S4, S8 | `internal/store` lista persistente con escritura atómica + test | `feat(store): lista persistente en fichero JSON` |
-| T5 | S2, S4, S8 | `internal/resolve` cola, ancla automática, candidatos + test | `feat(resolve): resolución en segundo plano con ancla y candidatos` |
-| T6 | S1, S4, S6, S10 | `cmd/web` + `web/` API y UI lista-primero, cestas por cadena + test | `feat(web): lista única, raíl de precios y una cesta por cadena` |
+| T1 | S7, S8 | Bootstrap del módulo, `.gitignore`, documento y rama | `6f95594` |
+| T2 | S3, S5, S9, S10 | `internal/identity` (marcas, dominio, ejes, tamaño, niveles) + tests del corpus | `a29eb0d` |
+| T3 | S8 | `internal/catalog` cliente HTTP de multisuper + test con servidor falso | `e69541b` |
+| T4 | S4, S8 | `internal/store` lista persistente con escritura atómica + test | `f7c66df` |
+| T5 | S2, S4, S8 | `internal/resolve` cola, ancla automática, candidatos + test | `9ffb56e` |
+| T6 | S1, S4, S6, S10 | `cmd/web` + `web/` API y UI lista-primero, cestas por cadena + test | `c0fb5f8` |
 | T7 | S7, S9 | README, verificación end-to-end contra multisuper | `docs: uso, alcance y límites medidos` |
+
+Todas las tareas están cerradas con sus pruebas en verde (`go test ./...`).
 
 ## Log
 
@@ -93,3 +95,25 @@ construye, no lo que se evita.
 - **L7** (defecto visto en multisuper, fuera de alcance aquí): la ayuda de `--only` en
   `cmd/multisuper/main.go:36` y `cmd/multisuper/basket.go:27` omite `mercadona`, que sí está
   registrado en `main.go:90`.
+- **L8** (evidencia, primera pasada end-to-end con el motor real): tres defectos que ningún test
+  unitario había visto. (a) ALDI devolvía leche y la app la descartaba: su categoría es
+  «Lácteos y huevos > Leche y bebidas vegetales» y el léxico leía «bebidas» como dominio, así que
+  toda leche de ALDI era una bebida vegetal. (b) «Huevos frescos codorniz SAN RAFAEL 12ud» salió
+  `equivalente` frente a «Huevos medianos M … 12 unidades» y **entró en la cesta de MAS**: 3,71 €
+  construidos sobre un producto que no es el mismo. (c) El ancla de «tomate frito» fue la de MAS por
+  desempate alfabético con un tamaño que no era moda, y el de «leche entera» fue Alcampo por el mismo
+  desempate.
+- **L9** (decisión, tras L8): el dominio se lee del nombre y la categoría queda como respaldo; eje
+  `species` estricto (codorniz, pato); la moda de tamaño exige al menos dos coincidencias y el
+  empate de precio sigue el orden de cadenas de la app, no el alfabético; eje `kind` para la lejía;
+  y entre dos candidatos igual de probables gana el que comparte más palabras con la base (una lejía
+  barata dejó de ganar a un detergente líquido). Cada uno con su caso en `internal/identity`.
+- **L10** (evidencia, segunda pasada end-to-end): leche entera `equivalente` a 0,96 € en DIA,
+  Mercadona y MAS, ALDI `probable` por no publicar tamaño, Carrefour `probable` por formato de 2,2 L
+  y Alcampo `quota`; huevos M 12 ud `equivalente` a 2,85 € en DIA, Mercadona y MAS con la codorniz
+  fuera; tomate frito con base Mercadona 0,90 € y DIA 0,89 €; detergente sin ninguna equivalencia
+  porque nadie publica un tamaño comparable («46 lavados» no es un volumen). Cestas resultantes:
+  DIA 3/4 y Mercadona 4/4.
+- **L11** (límite aceptado): los productos que solo publican un rendimiento («N lavados») o ningún
+  tamaño se quedan en `probable` y no entran en ningún total. Es preferible un hueco a un total
+  inventado; el README lo declara.

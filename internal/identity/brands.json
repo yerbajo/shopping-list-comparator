@@ -1,0 +1,39 @@
+{
+  "alcampo": {
+    "prefix": ["producto alcampo", "producto economico alcampo"],
+    "brand": ["auchan", "cosmia", "qilive", "actuel", "producto alcampo"],
+    "name": ["producto alcampo", "producto economico alcampo", "auchan"]
+  },
+  "aldi": {
+    "brand": ["milsani", "tandil", "esselt", "biscotto", "bon-ri", "bon ri", "all seasons",
+              "el horno", "special", "bio", "gutbio", "myvay", "choceur", "moser roth",
+              "milk mouse", "lacura", "la cocina", "seasons best", "asia green garden"],
+    "name": ["milsani", "tandil", "esselt", "biscotto", "bon-ri", "all seasons", "el horno",
+             "gutbio", "myvay", "choceur", "moser roth", "lacura"]
+  },
+  "carrefour": {
+    "brand": ["carrefour", "fin carre", "simpl", "de nuestra tierra"],
+    "name": ["carrefour", "fin carre"]
+  },
+  "dia": {
+    "prefix": ["dia"],
+    "brand": ["dia"],
+    "name": ["el molino de dia", "diasol", "dia lactea", "dia galleteca", "dia arrozona",
+             "dia vegecampo", "dia super paco", "dia al punto", "dia fidias", "dia la llama",
+             "dia seleccion mundial", "dia mari marinera"]
+  },
+  "lidl": {
+    "brand": ["milbona", "realvalle", "sondey", "freeway", "deluxe", "alesto", "lupilu", "cien",
+              "cleanmaxx", "silvercrest", "livarno", "harvest basket", "chef select", "vitasia",
+              "maribel", "combino"],
+    "name": ["milbona", "realvalle", "sondey", "freeway", "alesto", "lupilu", "cleanmaxx"]
+  },
+  "mas": {
+    "brand": ["ifa"],
+    "name": ["ifa eliges", "ifa unnia", "ifaeliges", "ifaunnia", "masiasol", "ifa "]
+  },
+  "mercadona": {
+    "brand": ["hacendado", "deliplus", "bosque verde", "compy", "solcare", "babysmile"],
+    "name": ["hacendado", "deliplus", "bosque verde", "compy"]
+  }
+}
