@@ -28,7 +28,7 @@ ranking.
 3. [Qué significa cada nivel](#qué-significa-cada-nivel)
 4. [Marcas blancas: dato, no código](#marcas-blancas-dato-no-código)
 5. [Límites medidos](#límites-medidos)
-6. [Interfaz](#interfaz) · [Estructura](#estructura) · [API](#api) · [Tests](#tests)
+6. [Interfaz](#interfaz) · [Estructura](#estructura) · [API](#api) · [Tests](#tests) · [Licencia](#licencia)
 
 ## Arrancarlo
 
@@ -287,3 +287,7 @@ este repo produce.
 
 Las marcas de las cadenas son de sus titulares y se usan solo para identificarlas. Los precios los
 publica cada cadena en el momento de la consulta y esta app no los guarda como histórico.
+
+## Licencia
+
+MIT © 2026 Alberto. El texto completo está en [LICENSE](LICENSE).
