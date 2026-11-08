@@ -84,7 +84,7 @@ func TestHealthcheckPathServesWithoutSearching(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	r.Start(ctx)
-	s := &server{o: options{store: st, resolver: r, assets: web.FS, engine: "http://engine.test"}}
+	s := &server{o: options{store: st, resolver: r, searcher: engine, assets: web.FS, engine: "http://engine.test"}}
 
 	url := regexp.MustCompile(`http://[0-9.]+:[0-9]+(/[^\s>]*)`).FindStringSubmatch(cmd[1])
 	if url == nil {
