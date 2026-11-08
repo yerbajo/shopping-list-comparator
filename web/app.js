@@ -20,7 +20,7 @@ function el(tag, props = {}, ...kids) {
     if (k === 'class') node.className = v;
     else if (k === 'text') node.textContent = v;
     else if (k === 'style') node.setAttribute('style', v);
-    else if (k.startsWith('data-')) node.setAttribute(k, v);
+    else if (k.startsWith('data-') || k.startsWith('aria-')) node.setAttribute(k, v);
     else node[k] = v;
   }
   for (const kid of kids) if (kid != null) node.append(kid);
@@ -41,6 +41,62 @@ const label = (store) => (state.stores.find((s) => s.store === store) || {}).lab
 const sectionLabel = (key) => (state.sections.find((s) => s.key === key) || {}).label || key;
 
 const dot = (store) => el('i', { class: 'dot', style: `--chain:${CHAIN_COLOUR[store] || '#999'}` });
+
+// The seven chain marks are the chain's name in the basket column. They live in one SVG sprite
+// so each row is a <use> of local markup and the page makes no request per logo.
+let logosReady = false;
+
+async function loadLogos() {
+  try {
+    const res = await fetch('/logos.svg');
+    if (!res.ok) return;
+    const doc = new DOMParser().parseFromString(await res.text(), 'image/svg+xml');
+    if (!doc.documentElement || doc.querySelector('parsererror')) return;
+    document.body.prepend(document.importNode(doc.documentElement, true));
+    logosReady = Boolean(document.getElementById('logo-dia'));
+  } catch {
+    logosReady = false;
+  }
+}
+
+// Each mark is cropped to its own drawing (measured with getBBox in the shared 106 x 30 space),
+// because the official vectors sit inside that box with very different aspect ratios: without the
+// crop, DIA looked tiny and Mercadona stretched. The viewport is fixed, so the marks fit it and
+// stay optically balanced.
+// Each mark is cropped to its own drawing (measured with getBBox in the shared 106 x 30 space) and
+// sized by hand: the official vectors have very different proportions — Mercadona is a 8,8:1
+// wordmark and DIA almost square — so one fixed box made DIA tiny and Mercadona unreadable. The
+// height is what is matched optically; the width follows the brand's own proportion.
+const LOGO_SIZE = {
+  alcampo: { w: 74, h: 18 },
+  aldi: { w: 54, h: 18 },
+  carrefour: { w: 104, h: 13 },
+  dia: { w: 35, h: 20 },
+  lidl: { w: 61, h: 17 },
+  mas: { w: 60, h: 19 },
+  mercadona: { w: 110, h: 13 }
+};
+
+function chainMark(store, fallbackName) {
+  const size = LOGO_SIZE[store];
+  if (!logosReady || !size) {
+    if (fallbackName) return el('span', { class: 'logo-fallback', text: fallbackName });
+    return dot(store);
+  }
+  const box = el('span', { class: 'cart-logo' });
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'logo');
+  svg.setAttribute('width', String(size.w));
+  svg.setAttribute('height', String(size.h));
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', `#logo-${store}`);
+  use.setAttribute('width', '100%');
+  use.setAttribute('height', '100%');
+  svg.append(use);
+  box.append(svg);
+  return box;
+}
 
 let state = null;
 let timer = null;
@@ -81,6 +137,36 @@ async function act(promise, message) {
   }
 }
 
+// ---------- tus supermercados ----------
+
+function renderStores() {
+  const host = $('#stores');
+  host.replaceChildren();
+  const chosen = state.stores.filter((s) => s.selected);
+  $('#stores-count').textContent = `(${chosen.length} de ${state.stores.length})`;
+  for (const store of state.stores) {
+    const chip = el('button', {
+      class: 'store-chip', type: 'button', 'data-store': store.store,
+      'aria-pressed': String(store.selected), 'aria-label': store.label
+    });
+    chip.append(el('span', { class: 'check', text: '✓', 'aria-hidden': 'true' }));
+    chip.append(chainMark(store.store, store.label));
+    chip.addEventListener('click', () => toggleStore(store.store));
+    host.append(chip);
+  }
+}
+
+async function toggleStore(store) {
+  const chosen = state.stores.filter((s) => s.selected).map((s) => s.store);
+  const next = chosen.includes(store) ? chosen.filter((s) => s !== store) : [...chosen, store];
+  if (!next.length) {
+    note('Deja al menos un supermercado en la comparativa.', true);
+    return;
+  }
+  await act(api('POST', '/api/stores', { chains: next }),
+    next.length < chosen.length ? 'Fuera de la comparativa.' : 'Añadido; se pedirá en los productos que falten.');
+}
+
 function render() {
   const pending = state.items.some((i) => i.resolving);
   const engine = $('#engine');
@@ -94,6 +180,7 @@ function render() {
   $('#meta').textContent = `${state.items.length} producto${state.items.length === 1 ? '' : 's'} · ` +
     `${confirmed}/${state.carts.length} cadenas con cesta · ${today}`;
 
+  renderStores();
   renderList();
   renderCarts();
   if (!shopStore) {
@@ -173,6 +260,7 @@ function renderItem(item) {
   }
 
   const cells = $('.cells', node);
+  cells.style.setProperty('--chains', String((item.cells || []).length || 1));
   for (const cell of item.cells || []) cells.append(renderCell(item, cell));
   return node;
 }
@@ -236,9 +324,12 @@ function renderCarts() {
   host.replaceChildren();
   for (const cart of state.carts) {
     const empty = cart.count === 0;
-    const row = el('button', { class: `cart${empty ? ' empty' : ''}`, type: 'button', 'data-shop': cart.store });
+    const row = el('button', {
+      class: `cart${empty ? ' empty' : ''}`, type: 'button', 'data-shop': cart.store,
+      'aria-label': `${cart.label}: ${empty ? 'sin productos confirmados' : money(cart.totalCents)}, ${cart.count} de ${cart.items} productos`
+    });
     row.append(
-      el('span', { class: 'cart-name' }, dot(cart.store), document.createTextNode(cart.label)),
+      el('span', { class: 'cart-name' }, chainMark(cart.store)),
       el('span', { class: 'cart-total', text: empty ? '—' : money(cart.totalCents) }),
       el('span', { class: 'cart-count', text: `${cart.count}/${cart.items}` })
     );
@@ -464,9 +555,14 @@ document.addEventListener('keydown', (event) => {
   else if (!$('#picker').hidden) closePicker();
 });
 
-const deepSearch = new URL(location.href).searchParams.get('buscar');
-refresh().then(() => {
-  if (!deepSearch) return;
-  $('#q').value = deepSearch;
-  search(deepSearch);
-});
+async function boot() {
+  await loadLogos();
+  await refresh();
+  const deepSearch = new URL(location.href).searchParams.get('buscar');
+  if (deepSearch) {
+    $('#q').value = deepSearch;
+    await search(deepSearch);
+  }
+}
+
+boot();

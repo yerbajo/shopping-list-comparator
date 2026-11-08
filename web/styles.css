@@ -48,6 +48,7 @@
 }
 
 *,*::before,*::after{box-sizing:border-box}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0;background:var(--paper);color:var(--ink);
@@ -93,6 +94,22 @@ button{font:inherit;color:inherit}
   .layout{grid-template-columns:minmax(0,1fr) 316px;gap:var(--sp-7)}
   .col-side{position:sticky;top:var(--sp-5);align-self:start}
 }
+
+/* ---------- tus supermercados ---------- */
+.stores-block{margin-bottom:var(--sp-7)}
+.stores{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3)}
+.store-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1.5px solid var(--ink);background:var(--surface);border-radius:2px;
+  padding:5px 9px;cursor:pointer;
+  transition:opacity .15s ease-out,border-color .15s ease-out,background-color .15s ease-out,transform .1s ease-out;
+}
+.store-chip:active{transform:scale(.96)}
+.store-chip[aria-pressed="false"]{opacity:.4;border-color:var(--rule);border-style:dashed}
+.store-chip[aria-pressed="false"]:hover{opacity:.75}
+.store-chip .cart-logo{background:transparent;box-shadow:none;padding:0}
+.store-chip .check{font:700 12px/1 var(--sans);color:var(--tomato);width:10px}
+.store-chip[aria-pressed="false"] .check{visibility:hidden}
 
 /* ---------- añadir ---------- */
 .add{display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-top:var(--sp-3)}
@@ -176,7 +193,7 @@ button{font:inherit;color:inherit}
 
 /* celdas: una tabla de siete columnas con filetes, no tarjetas */
 .cells{list-style:none;padding:0;margin-top:var(--sp-3);display:grid;gap:0;
-  grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--rule)}
+  grid-template-columns:repeat(var(--chains,7),minmax(0,1fr));border-top:1px solid var(--rule)}
 .cell{padding:var(--sp-2) var(--sp-2) var(--sp-3);border-bottom:1px solid var(--rule);border-right:1px solid var(--rule);display:flex;flex-direction:column;gap:3px}
 .cell:last-child{border-right:0}
 .cell .chain{display:flex;align-items:center;gap:5px;font:600 10px/1.4 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
@@ -221,7 +238,12 @@ button{font:inherit;color:inherit}
 .cart:hover{background:var(--paper-2)}
 .cart:disabled{cursor:default;opacity:.55}
 .cart:disabled:hover{background:transparent}
+/* Las marcas sustituyen al punto y al nombre en la columna de cestas: son el nombre. Van
+   sobre una placa blanca porque el vector de Carrefour incluye su propio fondo blanco. */
 .cart-name{display:flex;align-items:center;gap:7px;font:600 .9375rem/1.2 var(--sans)}
+.cart-logo{display:inline-flex;align-items:center;justify-content:center;background:var(--surface);padding:3px 5px;border-radius:2px;box-shadow:inset 0 0 0 1px var(--rule)}
+.logo{display:block}
+.logo-fallback{font:600 11px/1.4 var(--sans);letter-spacing:.08em;text-transform:uppercase}
 .cart-total{font:500 1.0625rem/1.2 var(--num);font-variant-numeric:tabular-nums;text-align:right}
 .cart-count{font:500 10.5px/1.3 var(--num);color:var(--ink-3);text-align:right;min-width:44px}
 .cart-empty{font:500 10.5px/1.3 var(--num);color:var(--muted)}

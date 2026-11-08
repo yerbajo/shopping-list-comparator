@@ -24,6 +24,14 @@
 
 <main class="wrap layout">
   <div class="col-main">
+    <section class="stores-block" aria-labelledby="stores-h">
+      <div class="stores-head">
+        <h2 class="kicker" id="stores-h">Tus supermercados <span class="count" id="stores-count"></span></h2>
+      </div>
+      <div class="stores" id="stores" role="group" aria-labelledby="stores-h"></div>
+      <p class="fine">Solo se consultan los que marques, y solo para ellos se genera cesta. Si una cadena no está en tu ciudad o no te convence, quítala: no gastará su cuota ni aparecerá en la comparativa.</p>
+    </section>
+
     <section aria-labelledby="add-h">
       <h2 class="kicker" id="add-h">Añadir a la lista</h2>
       <form class="add" id="add" novalidate>
@@ -65,6 +73,7 @@
 <footer class="wrap colophon">
   <p>Los precios los publica cada cadena en el momento de la consulta, en céntimos enteros, y el €/kg o €/L solo cuando ella lo publica. La equivalencia es una propuesta con su nivel declarado: <b>exacta</b> es el mismo código de barras, <b>equivalente</b> el mismo producto con la misma variante y tamaño, <b>probable</b> otra variante u otro formato. Esta app no declara qué supermercado es más barato.</p>
   <p>Motor de catálogo: multisuper. Una cadena que no responde se muestra con su estado y no cancela a las demás.</p>
+  <p>Las marcas de las cadenas son de sus titulares y se usan solo para identificarlas.</p>
 </footer>
 
 <div class="shop" id="shop" hidden role="dialog" aria-modal="true" aria-labelledby="shop-h" tabindex="-1">
