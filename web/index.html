@@ -3,75 +3,107 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#F7F8FA">
+<meta name="theme-color" content="#FBFAF7">
 <title>La lista · una compra, cada supermercado</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <a class="skip" href="#lista">Ir a la lista</a>
 
-<header class="top">
-  <div class="top-inner">
-    <p class="brand">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M3 6.5h14l-1.4 8.2a1.6 1.6 0 0 1-1.6 1.3H6a1.6 1.6 0 0 1-1.6-1.3L3 6.5Z" stroke="currentColor" stroke-width="1.6"/>
-        <path d="M7.2 6.4a2.8 2.8 0 0 1 5.6 0" stroke="currentColor" stroke-width="1.6"/>
-      </svg>
-      La lista
-    </p>
+<header class="masthead">
+  <div class="wrap masthead-row">
+    <p class="name">La lista<span class="dot-end">.</span></p>
+    <p class="meta" id="meta">—</p>
     <p class="engine" id="engine" role="status"></p>
   </div>
-  <div class="top-copy">
-    <h1>Una lista. La misma compra en cada supermercado.</h1>
-    <p class="lede">Añade un producto de cualquier cadena: buscamos su equivalente en las demás con las marcas blancas de cada una, y montamos una lista por supermercado con su total y lo que falta.</p>
+  <div class="wrap headline">
+    <h1>Una lista.<br><em>La misma compra</em> en cada supermercado.</h1>
+    <p class="standfirst">Escribe un producto y elige la cadena donde lo viste. Buscamos su equivalente en las demás con las marcas blancas de cada una y montamos una lista por supermercado, con su total y lo que falta.</p>
   </div>
 </header>
 
-<main>
-  <form class="add" id="add" novalidate>
-    <label class="sr" for="q">Producto que quieres añadir</label>
-    <input id="q" name="q" type="search" autocomplete="off" placeholder="leche entera, pan de molde, huevos…" aria-describedby="add-note">
-    <button class="btn primary" type="submit">Añadir a la lista</button>
-  </form>
-  <p class="fine" id="add-note">El primer producto que aparece con precio en cada cadena es la base; puedes cambiarla o elegir otro producto de una cadena concreta desde la fila.</p>
-  <p class="fine" id="status" role="status"></p>
+<main class="wrap layout">
+  <div class="col-main">
+    <section aria-labelledby="add-h">
+      <h2 class="kicker" id="add-h">Añadir a la lista</h2>
+      <form class="add" id="add" novalidate>
+        <label class="sr" for="q">Qué quieres añadir</label>
+        <input id="q" name="q" type="search" autocomplete="off" placeholder="leche entera, pan de molde, huevos…" aria-describedby="add-note">
+        <button class="btn primary" type="submit">Buscar</button>
+      </form>
+      <p class="fine" id="add-note">El producto que marques será la base: su variante y su tamaño mandan en la equivalencia.</p>
+      <p class="fine alert" id="status" role="status"></p>
 
-  <section aria-labelledby="lista-h" id="lista">
-    <div class="sec-head">
-      <h2 id="lista-h">Tu lista</h2>
-      <span class="hint" id="list-meta">Vacía</span>
-    </div>
-    <ol class="list" id="list"></ol>
-    <p class="empty" id="empty">Todavía no hay nada. Escribe un producto arriba: se busca una vez y se resuelve en las siete cadenas.</p>
-    <button class="btn quiet" type="button" id="retry" hidden>Reintentar las cadenas que no respondieron</button>
-  </section>
+      <section class="picker" id="picker" hidden aria-labelledby="picker-h">
+        <div class="picker-head">
+          <h3 id="picker-h" class="picker-title"></h3>
+          <button class="btn tiny quiet" type="button" id="picker-cancel">Cerrar</button>
+        </div>
+        <div class="picker-chains" id="picker-chains"></div>
+      </section>
+    </section>
 
-  <section aria-labelledby="cestas-h" id="cestas">
-    <div class="sec-head">
-      <h2 id="cestas-h">Una cesta por supermercado</h2>
-      <span class="hint">Solo cuentan los productos confirmados</span>
-    </div>
-    <p class="sub">Cada tarjeta es la lista de la compra de esa cadena: los productos con su precio y lo que allí no hemos encontrado. Un producto <em>probable</em> no entra en el total: es una propuesta, no una certeza.</p>
+    <section id="lista" aria-labelledby="lista-h">
+      <h2 class="kicker" id="lista-h">Tu lista <span class="count" id="list-count"></span></h2>
+      <div id="sections"></div>
+      <p class="empty" id="empty">Todavía no hay nada. Escribe un producto arriba: se busca una vez y se resuelve en las siete cadenas.</p>
+      <div class="list-actions">
+        <button class="btn quiet" type="button" id="retry" hidden>Reintentar las cadenas que no respondieron</button>
+        <button class="btn quiet" type="button" id="recompute" hidden>Recalcular equivalencias sin gastar cuota</button>
+      </div>
+    </section>
+  </div>
+
+  <aside class="col-side" aria-labelledby="cestas-h">
+    <h2 class="kicker" id="cestas-h">Una cesta por supermercado</h2>
     <div class="carts" id="carts"></div>
-  </section>
+    <p class="fine">Solo suman los productos confirmados: <b>exacta</b>, <b>equivalente</b> o <b>elegida</b>. Un <b>probable</b> es una propuesta, no un precio.</p>
+    <p class="fine">Pulsa una cadena para abrir su lista de la compra, con casillas para marcar en la tienda.</p>
+  </aside>
 </main>
 
-<footer>
-  <p>Los precios los publica cada cadena en el momento de la consulta, en céntimos enteros. La equivalencia es una propuesta medida, con su nivel declarado: <b>exacta</b> es el mismo código de barras, <b>equivalente</b> es el mismo producto con la misma variante y tamaño, <b>probable</b> es otra variante u otro formato. Esta app no declara qué supermercado es más barato.</p>
-  <p class="fine">Motor de catálogo: multisuper. Una cadena que no responde se muestra con su estado y no cancela a las demás.</p>
+<footer class="wrap colophon">
+  <p>Los precios los publica cada cadena en el momento de la consulta, en céntimos enteros, y el €/kg o €/L solo cuando ella lo publica. La equivalencia es una propuesta con su nivel declarado: <b>exacta</b> es el mismo código de barras, <b>equivalente</b> el mismo producto con la misma variante y tamaño, <b>probable</b> otra variante u otro formato. Esta app no declara qué supermercado es más barato.</p>
+  <p>Motor de catálogo: multisuper. Una cadena que no responde se muestra con su estado y no cancela a las demás.</p>
 </footer>
+
+<div class="shop" id="shop" hidden role="dialog" aria-modal="true" aria-labelledby="shop-h" tabindex="-1">
+  <div class="shop-inner">
+    <header class="shop-head">
+      <p class="kicker">Lista para la tienda</p>
+      <h2 id="shop-h"></h2>
+      <p class="shop-meta" id="shop-meta"></p>
+      <div class="shop-actions">
+        <button class="btn" type="button" id="shop-copy">Copiar</button>
+        <button class="btn" type="button" id="shop-print">Imprimir</button>
+        <button class="btn primary" type="button" id="shop-close">Cerrar</button>
+      </div>
+    </header>
+    <ul class="checklist" id="shop-list"></ul>
+    <p class="fine" id="shop-missing"></p>
+  </div>
+</div>
 
 <template id="item-tpl">
   <li class="item">
     <div class="item-head">
-      <div>
-        <h3 class="q"></h3>
-        <p class="anchor-line"></p>
+      <h3 class="q"></h3>
+      <div class="item-tools">
+        <div class="qty" role="group" aria-label="Cantidad">
+          <button class="step" type="button" data-step="-1" aria-label="Una unidad menos">−</button>
+          <span class="qty-n" aria-live="polite">1</span>
+          <button class="step" type="button" data-step="1" aria-label="Una unidad más">+</button>
+        </div>
+        <label class="section-pick">
+          <span class="sr">Sección</span>
+          <select class="section"></select>
+        </label>
+        <button class="btn tiny quiet remove" type="button">Quitar</button>
       </div>
-      <button class="btn tiny danger remove" type="button">Quitar</button>
     </div>
+    <p class="base"></p>
     <p class="item-note" hidden></p>
-    <div class="cells"></div>
+    <ul class="cells"></ul>
   </li>
 </template>
 
