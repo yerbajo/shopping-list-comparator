@@ -78,7 +78,7 @@ func (s *server) handler() http.Handler {
 		files := http.FileServerFS(s.o.assets)
 		// Only the embedded paths are served: a catch-all GET would shadow the 405 that
 		// ServeMux answers for a wrong verb on /api/items.
-		for _, path := range []string{"/{$}", "/styles.css", "/app.js", "/logos.svg", "/fonts/{name}"} {
+		for _, path := range []string{"/{$}", "/styles.css", "/app.js", "/logos.svg", "/logo.png", "/favicon.png", "/fonts/{name}"} {
 			mux.Handle("GET "+path, files)
 		}
 	}

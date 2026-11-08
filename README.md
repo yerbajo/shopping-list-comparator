@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/web/logo.webp" alt="shopping-list-comparator" width="440">
+</p>
+
 # shopping-list-comparator
 
 **Una lista de la compra única que se convierte en una lista por supermercado.** Escribes un producto,
@@ -67,7 +71,7 @@ marcadas son las únicas que se consultan, las únicas que tienen celda en cada 
 para las que se genera cesta. Si una cadena no está en tu ciudad, o no te convence, quítala: **no
 gastará su cuota** ni aparecerá en la comparativa.
 
-![Tus supermercados: seis de siete seleccionados, LIDL fuera](docs/web/paso-supermercados.png)
+![Tus supermercados: cuatro de siete seleccionados; ALDI, LIDL y Carrefour fuera](docs/web/paso-supermercados.png)
 
 La selección se guarda con la lista (en `data/list.json` o en el volumen), así que sobrevive a
 reinicios y a `docker compose up --build`. Debe quedar al menos una. Si vuelves a activar una cadena,
@@ -222,7 +226,8 @@ encima de cada fila y filetes de 1 px separando las cadenas, como una tabla de p
 dice con una palabra; el color solo tiñe esa palabra y cada cadena lleva su marca.
 
 Sin CDN y sin build: las dos fuentes (Inter Tight variable y JetBrains Mono, subset latin + latin-ext)
-están en `web/fonts/` y se embeben en el binario, 168 KB en total; los siete logos oficiales están en
+están en `web/fonts/` y se embeben en el binario, 168 KB en total; el logotipo (`web/logo.png`, con el
+fondo recortado) y su favicon van también dentro; y los siete logos de cadena están en
 `web/logos.svg`, recortados a su propio dibujo y reutilizados de multisuper. Las animaciones son
 transiciones CSS de 100–150 ms sobre propiedades concretas, `scale(0.96)` al pulsar y nada cuando el
 sistema pide movimiento reducido.
@@ -235,7 +240,7 @@ internal/identity/    la escalera de equivalencia + brands.json + los tests del 
 internal/catalog/     cliente de POST /api/search (multisuper), céntimos, €/unidad y selección de cadenas
 internal/store/       la lista en un JSON con escritura atómica
 internal/resolve/     cola en segundo plano, base automática, alternativas
-web/                  index.html, styles.css, app.js, logos.svg y las fuentes (todo embebido)
+web/                  index.html, styles.css, app.js, logo.png, favicon.png, logos.svg y fuentes
 Dockerfile            imagen de dos etapas, usuario sin privilegios, lista en /data
 docker-compose.yml    la lista con su volumen y el motor del host
 docs/despliegue.md    Docker, copias, LAN, actualización y problemas
