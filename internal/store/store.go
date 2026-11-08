@@ -28,8 +28,12 @@ var ErrEmptyQuery = errors.New("el producto no puede estar vacío")
 // best equivalent per chain; Candidates keeps the alternatives so a shopper can overrule
 // the machine without spending another search.
 type Item struct {
-	ID         string             `json:"id"`
-	Query      string             `json:"query"`
+	ID    string `json:"id"`
+	Query string `json:"query"`
+	// Quantity is how many of this thing the shopper wants; Section is the aisle it is filed
+	// under. Both are the shopper's, never the engine's.
+	Quantity   int                `json:"quantity"`
+	Section    string             `json:"section,omitempty"`
 	Anchor     *identity.Product  `json:"anchor,omitempty"`
 	Matches    []identity.Match   `json:"matches,omitempty"`
 	Candidates []identity.Product `json:"candidates,omitempty"`
@@ -70,6 +74,9 @@ func Open(path string) (*Store, error) {
 	// left `resolving` forever would hide the retry button.
 	for i := range s.state.Items {
 		s.state.Items[i].Resolving = false
+		if s.state.Items[i].Quantity < 1 {
+			s.state.Items[i].Quantity = 1
+		}
 	}
 	return s, nil
 }
@@ -108,7 +115,7 @@ func (s *Store) Add(query string) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
-	it := Item{ID: id, Query: query, Resolving: true}
+	it := Item{ID: id, Query: query, Quantity: 1, Resolving: true}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state.Items = append(s.state.Items, it)

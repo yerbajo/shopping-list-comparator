@@ -208,6 +208,9 @@ func (r *Resolver) Resolve(ctx context.Context, id string) error {
 		i.Resolving = false
 		i.Error = ""
 		i.Anchor = anchor
+		if i.Section == "" {
+			i.Section = identity.Section(identity.Domain(picked(anchor)))
+		}
 		i.Matches = matches
 		i.Candidates = cands
 		i.Status = status
@@ -237,6 +240,14 @@ func retryable(it store.Item) bool {
 		}
 	}
 	return false
+}
+
+// picked dereferences the anchor the update closure needs; an anchor always exists here.
+func picked(p *identity.Product) identity.Product {
+	if p == nil {
+		return identity.Product{}
+	}
+	return *p
 }
 
 func errText(err error) string {

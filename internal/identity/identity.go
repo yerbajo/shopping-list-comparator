@@ -38,6 +38,11 @@ type Product struct {
 	URL        string `json:"url,omitempty"`
 	Image      string `json:"image,omitempty"`
 	PriceCents *int64 `json:"priceCents,omitempty"`
+	// UnitPriceCents is the chain's own price per kilo, litre or unit when it publishes one.
+	// It is what makes two formats comparable: 1 L at 0,96 € is 0,96 €/L, and a 2,2 L bottle
+	// at 2,75 € is 1,25 €/L, which is the number that answers "¿está caro?".
+	UnitPriceCents *int64 `json:"unitPriceCents,omitempty"`
+	Unit           string `json:"unit,omitempty"`
 }
 
 // Levels, from the strongest claim to the weakest. `no` is a real answer: it says the
@@ -269,6 +274,13 @@ func Domain(p Product) string {
 	return ""
 }
 
+// QueryDomain is the domain the shopper's own words name, or "". It is the same gate applied to
+// the query, and it is what stops a picker from offering chocolate eggs to someone who typed
+// "huevos" — the engine's own search is happy to return them.
+func QueryDomain(query string) string {
+	return Domain(Product{Name: query})
+}
+
 func domainLabel(d string) string {
 	if l, ok := domainLabels[d]; ok {
 		return l
@@ -414,6 +426,56 @@ func axisDiff(anchor, cand map[string]string) (axis, value string) {
 		}
 	}
 	return "", ""
+}
+
+// ---------- aisles ----------
+
+// Sections are the aisles the list is grouped by. They are derived from the product's domain
+// so a shopper never files anything by hand, and can be changed by hand when the guess is wrong.
+const (
+	SectionFresh  = "fresco"
+	SectionPantry = "despensa"
+	SectionHome   = "limpieza"
+	SectionOther  = "otros"
+)
+
+var sectionLabels = map[string]string{
+	SectionFresh: "Fresco", SectionPantry: "Despensa",
+	SectionHome: "Limpieza e higiene", SectionOther: "Otros",
+}
+
+// Sections lists the aisles in the order the list shows them.
+func Sections() []string {
+	return []string{SectionFresh, SectionPantry, SectionHome, SectionOther}
+}
+
+// SectionLabel is the name a shopper reads.
+func SectionLabel(section string) string {
+	if l, ok := sectionLabels[section]; ok {
+		return l
+	}
+	return sectionLabels[SectionOther]
+}
+
+// ValidSection reports whether a section is one the app knows.
+func ValidSection(section string) bool {
+	_, ok := sectionLabels[section]
+	return ok
+}
+
+// Section files a product by its domain. Dairy, eggs, bread and frozen go first because that
+// is the order of a shop; a domain nobody maps is "otros" and never a silent guess.
+func Section(domain string) string {
+	switch domain {
+	case "lacteos", "huevos", "pan", "congelados":
+		return SectionFresh
+	case "arroces", "aceites", "salsas", "galletas", "dulces", "bebidas", "cafe", "conservas":
+		return SectionPantry
+	case "drogueria", "higiene", "mascotas":
+		return SectionHome
+	default:
+		return SectionOther
+	}
 }
 
 // ---------- sizes ----------
@@ -637,9 +699,6 @@ func Compare(query string, anchor, cand Product) Match {
 	if ao, co := OwnBrand(anchor), OwnBrand(cand); ao != nil && co != nil {
 		if *ao == *co {
 			m.Score += 10
-			if *ao {
-				reasons = append(reasons, "marca blanca de la cadena")
-			}
 		} else {
 			m.Score -= 15
 			reasons = append(reasons, "marca distinta")
@@ -720,11 +779,16 @@ func priceOf(p Product) int64 {
 // the size the other chains also sell, then the cheapest — the same reasoning the measured
 // pass followed when DIA, Mercadona and ALDI priced 1 L of own-brand whole milk at 0,96 €.
 func PickAnchor(query string, cands []Product, order []string) (Product, bool) {
+	want := QueryDomain(query)
 	covering := make([]Product, 0, len(cands))
 	for _, c := range cands {
-		if c.PriceCents != nil && CoversQuery(query, c) {
-			covering = append(covering, c)
+		if c.PriceCents == nil || !CoversQuery(query, c) {
+			continue
 		}
+		if d := Domain(c); want != "" && d != "" && d != want {
+			continue // another domain is another product, not a base to build a list on
+		}
+		covering = append(covering, c)
 	}
 	if len(covering) == 0 {
 		return Product{}, false

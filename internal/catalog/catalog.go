@@ -90,16 +90,20 @@ type storeResult struct {
 	Count int    `json:"count"`
 	Error *Error `json:"error,omitempty"`
 	Hits  []struct {
-		Store    string   `json:"store"`
-		ID       string   `json:"id"`
-		Name     string   `json:"name"`
-		Brand    string   `json:"brand,omitempty"`
-		EAN      string   `json:"ean,omitempty"`
-		Size     string   `json:"size,omitempty"`
-		Price    *float64 `json:"price,omitempty"`
-		Category string   `json:"category,omitempty"`
-		URL      string   `json:"url,omitempty"`
-		Image    string   `json:"image,omitempty"`
+		Store string   `json:"store"`
+		ID    string   `json:"id"`
+		Name  string   `json:"name"`
+		Brand string   `json:"brand,omitempty"`
+		EAN   string   `json:"ean,omitempty"`
+		Size  string   `json:"size,omitempty"`
+		Price *float64 `json:"price,omitempty"`
+		// PricePerUnit is the chain's own €/kg, €/L or €/unit; the engine only publishes it
+		// when the chain does.
+		PricePerUnit float64 `json:"pricePerUnit,omitempty"`
+		Unit         string  `json:"unit,omitempty"`
+		Category     string  `json:"category,omitempty"`
+		URL          string  `json:"url,omitempty"`
+		Image        string  `json:"image,omitempty"`
 	} `json:"hits"`
 }
 
@@ -143,6 +147,10 @@ func (c *Client) Search(ctx context.Context, term string, limit int, stores []st
 			}
 			if h.Price != nil {
 				p.PriceCents = Cents(*h.Price)
+			}
+			if h.PricePerUnit > 0 {
+				p.UnitPriceCents = Cents(h.PricePerUnit)
+				p.Unit = h.Unit
 			}
 			cr.Hits = append(cr.Hits, p)
 		}
