@@ -221,7 +221,13 @@ func (s *server) handleAdd(w http.ResponseWriter, r *http.Request) {
 	}
 	it, err := s.o.store.Add(body.Query)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		// Only the empty query is the caller's fault; a write failure is ours, and the
+		// message must not leak the container's paths.
+		if errors.Is(err, store.ErrEmptyQuery) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "no se pudo guardar la lista")
 		return
 	}
 	s.o.resolver.Enqueue(it.ID)

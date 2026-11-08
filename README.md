@@ -4,6 +4,8 @@
 equivalente en las demás —marcas blancas incluidas— y monta **una cesta por supermercado** con su
 total y lo que allí falta.
 
+![La lista: un producto por fila y una celda por cadena con su precio y su nivel](docs/web/desktop.png)
+
 **Qué no es.** No es un clon de [multisuper](https://github.com/yerbajo/multi-super) y no declara
 «el más barato». La pasada medida con los catálogos reales dio la misma marca blanca al mismo precio
 en varias cadenas (leche entera 1 L a 0,96 € en DIA, Mercadona, ALDI y 0,95 € en MAS; huevos M 12 ud
@@ -21,7 +23,16 @@ lista:  leche entera · huevos · tomate frito · detergente
 
 ## Arrancarlo
 
-El catálogo lo sirve multisuper; esta app no duplica sus siete clientes.
+Con Docker, en un comando (detalles y copias de seguridad en [docs/despliegue.md](docs/despliegue.md)):
+
+```bash
+docker compose up -d --build      # http://127.0.0.1:8100, motor en el host:8099
+```
+
+La imagen no lleva el motor de catálogo: apunta a un multisuper con
+`SLC_MULTISUPER=http://host:8099`. La lista vive en el volumen `lista-data`.
+
+Sin Docker, el catálogo lo sirve multisuper; esta app no duplica sus siete clientes.
 
 ```bash
 # 1. el motor de catálogo, en otra terminal (repo multisuper)
@@ -108,10 +119,21 @@ Para añadir una marca: una línea en `brands.json` y un caso en `TestOwnBrand`.
 Por eso la resolución va en **segundo plano, de una en una, con pausa** (`-gap`): diez items son diez
 fan-outs de siete cadenas, y sin cola la lista agota sus propias cuotas.
 
+## Interfaz
+
+La lista manda: una fila por producto, una celda por cadena con su precio y su nivel, las
+alternativas plegadas tras «N opciones», y debajo una cesta por supermercado con su total y lo que
+falta. En móvil la rejilla pasa a dos columnas.
+
+![La misma lista en el móvil](docs/web/movil.png)
+
 ## Estructura
 
 ```
 cmd/web/              servidor HTTP, API y la página
+Dockerfile            imagen de dos etapas, usuario sin privilegios, lista en /data
+docker-compose.yml    la lista con su volumen y el motor del host
+docs/despliegue.md    Docker, copias, LAN, actualización y problemas
 internal/identity/    la escalera de equivalencia + brands.json + los tests del corpus real
 internal/catalog/     cliente de POST /api/search (multisuper) y conversión a céntimos
 internal/store/       la lista en un JSON con escritura atómica

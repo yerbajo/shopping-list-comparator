@@ -1,0 +1,27 @@
+# La lista, en un contenedor, con su fichero en un volumen.
+#
+# El motor de catálogo (multisuper) no está aquí: corre en el host o en otra máquina. En Linux,
+# host.docker.internal es el host real gracias a host-gateway, así que el motor que ya tengas
+# escuchando en 127.0.0.1:8099 se alcanza sin publicarlo en la red.
+services:
+  lista:
+    build: .
+    image: shopping-list-comparator:local
+    restart: unless-stopped
+    ports:
+      # Solo loopback por defecto: la lista no tiene autenticación. Para servirla en la LAN,
+      # SLC_BIND=0.0.0.0 docker compose up -d
+      - "${SLC_BIND:-127.0.0.1}:8100:8100"
+    volumes:
+      - lista-data:/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - "-addr=0.0.0.0:8100"
+      - "-multisuper=${SLC_MULTISUPER:-http://host.docker.internal:8099}"
+      - "-data=/data/list.json"
+      - "-gap=${SLC_GAP:-4s}"
+      - "-limit=${SLC_LIMIT:-20}"
+
+volumes:
+  lista-data:

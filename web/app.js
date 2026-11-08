@@ -35,6 +35,9 @@ const label = (store) => (state.stores.find((s) => s.store === store) || {}).lab
 
 let state = null;
 let timer = null;
+// Details that are open survive a re-render: while an item resolves the page rebuilds every
+// 2,5 s, and reopening "N opciones" after each poll is not a feature.
+const openKeys = new Set();
 
 async function api(method, path, body) {
   const res = await fetch(path, {
@@ -97,6 +100,7 @@ async function refresh() {
 
 function renderList() {
   const list = $('#list');
+  list.querySelectorAll('.more[open]').forEach((d) => d.dataset.key && openKeys.add(d.dataset.key));
   list.replaceChildren();
   $('#empty').hidden = state.items.length > 0;
   $('#list-meta').textContent = state.items.length
@@ -157,26 +161,37 @@ function renderCell(item, cell) {
       el('span', { class: `badge ${LEVEL[level]}`, text: level })
     );
     if (cell.reason) node.append(el('span', { class: 'note', text: cell.reason }));
+
+    // Alternatives stay behind one closed row: a cell is a price, not a catalogue. Eight
+    // options printed open turned every row into a wall of small text.
     const isBase = item.anchor && item.anchor.store === cell.store && item.anchor.id === p.id;
-    if (!isBase) {
-      node.append(el('button', {
-        class: 'alt', type: 'button', text: 'usar como base',
-        'data-anchor': `${cell.store}|${p.id}`
-      }));
+    const extra = (cell.alts || []).length + (isBase ? 0 : 1);
+    if (extra > 0) {
+      const key = `${item.id}|${cell.store}`;
+      const more = el('details', { class: 'more', 'data-key': key });
+      more.open = openKeys.has(key);
+      more.addEventListener('toggle', () => (more.open ? openKeys.add(key) : openKeys.delete(key)));
+      const count = extra === 1 ? '1 opción' : `${extra} opciones`;
+      more.append(el('summary', { text: isBase ? count : `${count} · cambiar` }));
+      const alts = el('div', { class: 'alts' });
+      if (!isBase) {
+        alts.append(el('button', {
+          class: 'alt', type: 'button', text: 'usar este como base',
+          'data-anchor': `${cell.store}|${p.id}`
+        }));
+      }
+      for (const alt of cell.alts || []) {
+        alts.append(el('button', {
+          class: 'alt', type: 'button',
+          'data-pick': `${cell.store}|${alt.product.id}`,
+          title: alt.reason || ''
+        }, el('span', { text: alt.product.name }), el('b', { text: money(alt.product.priceCents) })));
+      }
+      more.append(alts);
+      node.append(more);
     }
   }
 
-  if (cell.alts && cell.alts.length) {
-    const alts = el('div', { class: 'alts' });
-    for (const alt of cell.alts) {
-      alts.append(el('button', {
-        class: 'alt', type: 'button',
-        'data-pick': `${cell.store}|${alt.product.id}`,
-        title: alt.reason || ''
-      }, el('span', { text: alt.product.name }), el('b', { text: money(alt.product.priceCents) })));
-    }
-    node.append(alts);
-  }
   return node;
 }
 
