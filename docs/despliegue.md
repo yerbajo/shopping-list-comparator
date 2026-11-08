@@ -42,7 +42,7 @@ Variables que entiende el compose:
 | `SLC_GAP` | `4s` | pausa entre búsquedas; súbela si tu lista es larga |
 
 ```bash
-SLC_MULTISUPER=http://192.168.1.245:8099 SLC_BIND=0.0.0.0 docker compose up -d
+SLC_MULTISUPER=http://192.168.1.50:8099 SLC_BIND=0.0.0.0 docker compose up -d
 ```
 
 ## 3. Con `docker run`, si prefieres no usar compose
@@ -95,11 +95,11 @@ VOLUME=lista-data
 
 ## 5. Motor en otra máquina
 
-Si multisuper corre en otra máquina de la red, apunta la app allí y asegúrate de que ese multisuper
+Si multisuper corre en otra máquina de la red (aquí `192.168.1.50` es un ejemplo: pon la IP o el nombre de la tuya), apunta la app allí y asegúrate de que ese multisuper
 escucha en todas las interfaces (`-addr 0.0.0.0:8099`), no solo en loopback:
 
 ```bash
-SLC_MULTISUPER=http://192.168.1.245:8099 docker compose up -d
+SLC_MULTISUPER=http://192.168.1.50:8099 docker compose up -d
 ```
 
 ## 6. Exponerla fuera del loopback
