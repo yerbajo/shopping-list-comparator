@@ -137,7 +137,8 @@ func (r *Resolver) Resolve(ctx context.Context, id string) error {
 	}
 	_, _ = r.Store.Update(id, func(i *store.Item) { i.Resolving = true; i.Error = "" })
 
-	reply, err := r.Search.Search(ctx, item.Query, r.limit(), nil)
+	chains := catalog.Selected(r.Store.Selected())
+	reply, err := r.Search.Search(ctx, item.Query, r.limit(), chains)
 	r.setLastError(errText(err))
 	if err != nil {
 		_, _ = r.Store.Update(id, func(i *store.Item) {
@@ -184,7 +185,7 @@ func (r *Resolver) Resolve(ctx context.Context, id string) error {
 
 	matches := make([]identity.Match, 0, len(catalog.Stores))
 	cands := make([]identity.Product, 0, len(catalog.Stores)*r.keep())
-	for _, chain := range catalog.Stores {
+	for _, chain := range chains {
 		hits := byStore[chain]
 		if len(hits) == 0 {
 			continue
@@ -208,6 +209,9 @@ func (r *Resolver) Resolve(ctx context.Context, id string) error {
 		i.Resolving = false
 		i.Error = ""
 		i.Anchor = anchor
+		if i.Section == "" {
+			i.Section = identity.Section(identity.Domain(picked(anchor)))
+		}
 		i.Matches = matches
 		i.Candidates = cands
 		i.Status = status
@@ -237,6 +241,14 @@ func retryable(it store.Item) bool {
 		}
 	}
 	return false
+}
+
+// picked dereferences the anchor the update closure needs; an anchor always exists here.
+func picked(p *identity.Product) identity.Product {
+	if p == nil {
+		return identity.Product{}
+	}
+	return *p
 }
 
 func errText(err error) string {

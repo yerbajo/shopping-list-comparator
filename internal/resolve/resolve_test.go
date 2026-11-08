@@ -19,15 +19,17 @@ func prod(store, name, brand, size string, cents int64) identity.Product {
 }
 
 type fakeSearch struct {
-	mu    sync.Mutex
-	reply catalog.Reply
-	err   error
-	calls int
+	mu     sync.Mutex
+	reply  catalog.Reply
+	err    error
+	calls  int
+	stores []string
 }
 
-func (f *fakeSearch) Search(_ context.Context, _ string, _ int, _ []string) (catalog.Reply, error) {
+func (f *fakeSearch) Search(_ context.Context, _ string, _ int, stores []string) (catalog.Reply, error) {
 	f.mu.Lock()
 	f.calls++
+	f.stores = append([]string(nil), stores...)
 	err := f.err
 	f.mu.Unlock()
 	if err != nil {
@@ -144,6 +146,32 @@ func TestResolveKeepsAPinnedAnchor(t *testing.T) {
 				t.Errorf("equivalent must share the pinned pack size: %+v", m)
 			}
 		}
+	}
+}
+
+func TestResolveAsksOnlyTheChainsTheShopperUses(t *testing.T) {
+	f := &fakeSearch{reply: milkReply()}
+	r, st, id := newResolver(t, f)
+	if err := st.SetSelected([]string{"dia", "mercadona"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Resolve(context.Background(), id); err != nil {
+		t.Fatal(err)
+	}
+	f.mu.Lock()
+	asked := append([]string(nil), f.stores...)
+	f.mu.Unlock()
+	if len(asked) != 2 || asked[0] != "dia" || asked[1] != "mercadona" {
+		t.Errorf("asked %v, want only dia and mercadona", asked)
+	}
+	it, _ := st.Get(id)
+	for _, m := range it.Matches {
+		if m.Product.Store != "dia" && m.Product.Store != "mercadona" {
+			t.Errorf("a chain outside the selection produced a basket line: %s", m.Product.Store)
+		}
+	}
+	if len(it.Matches) != 2 {
+		t.Errorf("matches: %d, want one per chosen chain", len(it.Matches))
 	}
 }
 

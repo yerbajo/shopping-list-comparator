@@ -209,6 +209,29 @@ func TestCategoryPathIsNotADomain(t *testing.T) {
 	}
 }
 
+func TestQueryDomainNamesWhatTheShopperAskedFor(t *testing.T) {
+	for query, want := range map[string]string{
+		"huevos": "huevos", "leche entera": "lacteos", "aceite de girasol": "aceites",
+		"detergente": "drogueria", "pan de molde": "pan", "tomate frito": "salsas",
+	} {
+		if got := QueryDomain(query); got != want {
+			t.Errorf("QueryDomain(%q) = %q, want %q", query, got, want)
+		}
+	}
+}
+
+func TestPickAnchorRejectsAnotherDomain(t *testing.T) {
+	choc := p("aldi", "Huevos de chocolate rellenos de crema de leche", "CHOCEUR®", "", 299)
+	plain := p("mas", "Huevos frescos clase l SAN RAFAEL 6ud", "", "", 180)
+	got, ok := PickAnchor("huevos", []Product{choc, plain}, nil)
+	if !ok || got.Name != plain.Name {
+		t.Fatalf("got %+v, want the plain eggs", got)
+	}
+	if _, ok := PickAnchor("huevos", []Product{choc}, nil); ok {
+		t.Error("chocolate eggs alone cannot be the base of a list about eggs")
+	}
+}
+
 func TestPickAnchorIgnoresAModeOfOne(t *testing.T) {
 	cands := []Product{
 		p("dia", "Tomate frito Dia Vegecampo 550 g", "Dia Vegecampo", "", 89),
