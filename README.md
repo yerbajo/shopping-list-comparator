@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/web/logo.webp" alt="shopping-list-comparator" width="440">
+</p>
+
 # shopping-list-comparator
 
 **Una lista de la compra única que se convierte en una lista por supermercado.** Escribes un producto,
@@ -14,12 +18,17 @@ ranking.
 
 ## Índice
 
-- [Arrancarlo](#arrancarlo)
-- [Guía de uso](#guía-de-uso) · [1. Tus supermercados](#1-tus-supermercados) · [2. Buscar y elegir](#2-buscar-y-elegir-el-producto) · [3. Leer la fila](#3-leer-la-fila) · [4. Las cestas](#4-las-cestas) · [5. Ir a la tienda](#5-ir-a-la-tienda)
-- [Qué significa cada nivel](#qué-significa-cada-nivel)
-- [Marcas blancas](#marcas-blancas-dato-no-código)
-- [Límites medidos](#límites-medidos)
-- [Interfaz](#interfaz) · [Estructura](#estructura) · [API](#api) · [Tests](#tests)
+1. [Arrancarlo](#arrancarlo)
+2. [Guía de uso](#guía-de-uso)
+   - [Tus supermercados](#1-tus-supermercados)
+   - [Buscar y elegir el producto](#2-buscar-y-elegir-el-producto)
+   - [Leer la fila](#3-leer-la-fila)
+   - [Las cestas](#4-las-cestas)
+   - [Ir a la tienda](#5-ir-a-la-tienda)
+3. [Qué significa cada nivel](#qué-significa-cada-nivel)
+4. [Marcas blancas: dato, no código](#marcas-blancas-dato-no-código)
+5. [Límites medidos](#límites-medidos)
+6. [Interfaz](#interfaz) · [Estructura](#estructura) · [API](#api) · [Tests](#tests) · [Licencia](#licencia)
 
 ## Arrancarlo
 
@@ -27,16 +36,15 @@ Con Docker, en un comando. La imagen **no lleva el motor de catálogo**: apunta 
 [multisuper](https://github.com/yerbajo/multi-super) que esté sirviendo su API.
 
 ```bash
-docker compose up -d --build      # http://127.0.0.1:8100, motor en el host:8099
-```
-
-```bash
-SLC_MULTISUPER=http://192.168.1.245:8099 docker compose up -d   # motor en otra máquina
-SLC_BIND=0.0.0.0 docker compose up -d                            # servirla en la LAN
+docker compose up -d --build                                    # http://127.0.0.1:8100, motor en el host:8099
+SLC_MULTISUPER=http://192.168.1.50:8099 docker compose up -d    # el motor en otra máquina (pon su IP)
+SLC_BIND=0.0.0.0 docker compose up -d                           # servirla en la LAN
+SLC_GAP=8s docker compose up -d                                 # listas largas: más pausa entre consultas
 ```
 
 La lista vive en el volumen `lista-data`; copias, restauración, actualización y problemas, en
-[docs/despliegue.md](docs/despliegue.md).
+[docs/despliegue.md](docs/despliegue.md). **No hay cuentas ni autenticación**: por defecto escucha solo
+en `127.0.0.1`; si la publicas en la LAN, hazlo sabiéndolo, y detrás de un proxy con TLS si sale de ella.
 
 Sin Docker:
 
@@ -56,25 +64,23 @@ go build -o bin/ ./... && bin/web -addr 127.0.0.1:8100 -multisuper http://127.0.
 | `-gap` | `4s` | pausa entre búsquedas; súbela si tu lista es larga |
 | `-limit` | `20` | productos pedidos a cada cadena por item |
 
----
+## Guía de uso
 
-# Guía de uso
-
-## 1. Tus supermercados
+### 1. Tus supermercados
 
 Lo primero: **decidir dónde compras**. Arriba de la lista están las siete cadenas con su logo; las
 marcadas son las únicas que se consultan, las únicas que tienen celda en cada producto y las únicas
 para las que se genera cesta. Si una cadena no está en tu ciudad, o no te convence, quítala: **no
 gastará su cuota** ni aparecerá en la comparativa.
 
-![Tus supermercados: seis de siete seleccionados, LIDL fuera](docs/web/paso-supermercados.png)
+![Tus supermercados: cuatro de siete seleccionados; ALDI, LIDL y Carrefour fuera](docs/web/paso-supermercados.png)
 
 La selección se guarda con la lista (en `data/list.json` o en el volumen), así que sobrevive a
 reinicios y a `docker compose up --build`. Debe quedar al menos una. Si vuelves a activar una cadena,
 la app pedirá solo los productos que nunca la consultaron: lo que ya tenía respuesta no se vuelve a
 preguntar.
 
-## 2. Buscar y elegir el producto
+### 2. Buscar y elegir el producto
 
 Escribe qué quieres y pulsa **Buscar**. La app pregunta solo a tus cadenas y te enseña lo que cada una
 tiene para ese término, con su precio y su €/kg o €/L. Ordena la marca propia primero y el precio
@@ -89,7 +95,7 @@ escribir «huevos» no ofrece huevos de chocolate, y si una cadena no tiene el p
 
 > Atajo: `/?buscar=huevos` abre el buscador ya lanzado.
 
-## 3. Leer la fila
+### 3. Leer la fila
 
 Cada producto de la lista es una fila: el nombre, su **base** (cadena, precio y €/unidad), el contador
 de **cantidad**, el **pasillo** y un botón para quitarlo. Debajo, una celda por cadena elegida.
@@ -115,7 +121,7 @@ Cantidad y pasillo son tuyos: la cantidad multiplica el total, y el pasillo (fre
 u otros) agrupa la lista como está ordenada la tienda. Los dos se deducen del producto y se pueden
 cambiar cuando la app acierta mal.
 
-## 4. Las cestas
+### 4. Las cestas
 
 La columna de la derecha es el resultado: **una cesta por supermercado**, con su total y cuántos
 productos de la lista cubre. Solo suman los productos **confirmados** —`exacta`, `equivalente` o
@@ -128,7 +134,7 @@ cancela a las demás**. Cuando falle por cuota o por red, debajo de la lista tie
 **Recalcular equivalencias** vuelve a juzgar lo ya guardado con las reglas actuales, también sin gastar
 cuota.
 
-## 5. Ir a la tienda
+### 5. Ir a la tienda
 
 Pulsa una cadena y se abre **su lista de la compra**: los productos con su precio, en el orden de los
 pasillos, con casillas para marcar lo que ya llevas y lo que no se encontró, para que lo busques a mano.
@@ -142,9 +148,9 @@ pasillos, con casillas para marcar lo que ya llevas y lo que no se encontró, pa
 
 En el móvil todo se recoloca a dos columnas por producto:
 
-<img src="docs/web/movil.png" alt="La misma lista en el móvil" width="380">
-
----
+<p align="center">
+  <img src="docs/web/movil.png" alt="La misma lista en el móvil, a dos columnas por producto" width="330">
+</p>
 
 ## Qué significa cada nivel
 
@@ -222,7 +228,8 @@ encima de cada fila y filetes de 1 px separando las cadenas, como una tabla de p
 dice con una palabra; el color solo tiñe esa palabra y cada cadena lleva su marca.
 
 Sin CDN y sin build: las dos fuentes (Inter Tight variable y JetBrains Mono, subset latin + latin-ext)
-están en `web/fonts/` y se embeben en el binario, 168 KB en total; los siete logos oficiales están en
+están en `web/fonts/` y se embeben en el binario, 168 KB en total; el logotipo (`web/logo.png`, con el
+fondo recortado) y su favicon van también dentro; y los siete logos de cadena están en
 `web/logos.svg`, recortados a su propio dibujo y reutilizados de multisuper. Las animaciones son
 transiciones CSS de 100–150 ms sobre propiedades concretas, `scale(0.96)` al pulsar y nada cuando el
 sistema pide movimiento reducido.
@@ -235,7 +242,7 @@ internal/identity/    la escalera de equivalencia + brands.json + los tests del 
 internal/catalog/     cliente de POST /api/search (multisuper), céntimos, €/unidad y selección de cadenas
 internal/store/       la lista en un JSON con escritura atómica
 internal/resolve/     cola en segundo plano, base automática, alternativas
-web/                  index.html, styles.css, app.js, logos.svg y las fuentes (todo embebido)
+web/                  index.html, styles.css, app.js, logo.png, favicon.png, logos.svg y fuentes
 Dockerfile            imagen de dos etapas, usuario sin privilegios, lista en /data
 docker-compose.yml    la lista con su volumen y el motor del host
 docs/despliegue.md    Docker, copias, LAN, actualización y problemas
@@ -251,7 +258,7 @@ de precios.
 |---|---|
 | `GET /api/state` | la lista entera: productos, celdas por cadena, cestas y selección |
 | `POST /api/search` | `{"query":"huevos"}`: lo que cada cadena tiene, para elegir (caché de 30 s) |
-| `POST /api/items` | `{"query":"leche entera","anchor":{…}}`: añade con ese producto como base |
+| `POST /api/items` | `{"query":"leche entera","anchor":{…}}`: añade; el ancla es opcional, sin ella la elige la app |
 | `PATCH /api/items/{id}` | `{"quantity":2}` o `{"section":"despensa"}` |
 | `DELETE /api/items/{id}` | quita un producto |
 | `POST /api/items/{id}/pick` | `{"store":"aldi","id":"…"}`: fija ese producto en esa cadena |
@@ -280,3 +287,7 @@ este repo produce.
 
 Las marcas de las cadenas son de sus titulares y se usan solo para identificarlas. Los precios los
 publica cada cadena en el momento de la consulta y esta app no los guarda como histórico.
+
+## Licencia
+
+MIT © 2026 Alberto. El texto completo está en [LICENSE](LICENSE).
