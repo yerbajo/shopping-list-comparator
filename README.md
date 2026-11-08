@@ -42,6 +42,14 @@ bin/web -addr 127.0.0.1:8100 -multisuper http://127.0.0.1:8099 -data data/list.j
 | `-gap` | `4s` | pausa entre búsquedas; súbela si tu lista es larga |
 | `-limit` | `20` | productos pedidos a cada cadena por item |
 
+## Qué supermercados entran
+
+Arriba de la lista hay **un selector con las siete cadenas**. Solo se consultan las que marques, solo
+para ellas hay celdas y solo para ellas se genera cesta: un supermercado que no está en tu ciudad —o
+que no te convence— no gasta su cuota ni ensucia la comparativa. La selección se guarda con la lista
+(fichero y volumen), así que sobrevive a reinicios y actualizaciones. Al volver a activar una cadena,
+la app pide solo los productos que nunca la consultaron.
+
 ## Cómo se usa
 
 1. **Buscar** un producto. La app pregunta a las siete cadenas y te enseña lo que cada una tiene, con
@@ -54,6 +62,8 @@ bin/web -addr 127.0.0.1:8100 -multisuper http://127.0.0.1:8099 -data data/list.j
    limpieza u otros; se deduce del producto y se puede cambiar). Los totales multiplican.
 5. **Ir a la tienda.** Pulsa una cadena y se abre **su lista**, con casillas para marcar, botón de
    imprimir y de copiar para WhatsApp. El enlace es compartible: `/?tienda=dia`.
+
+![Tus supermercados: seis de siete seleccionados, LIDL fuera](docs/web/supermercados.png)
 
 | Buscador | Lista para la tienda |
 |---|---|
@@ -135,6 +145,11 @@ vuelve a juzgar los productos ya guardados **sin preguntar a ninguna cadena**.
 
 ## Interfaz
 
+Cada cesta lleva **el logo oficial de su cadena** (los siete vectores viven en `web/logos.svg`,
+recortados a su propio dibujo y embebidos en el binario; se reutilizan de multisuper, donde ya estaban
+dibujados en un recuadro común de 106 × 30). Las marcas son de sus titulares y se usan solo para
+identificar la cadena.
+
 Identidad propia, no la de multisuper: papel casi blanco, tinta negra, un solo acento rojo tomate,
 grotesca grande para los titulares y monoespaciada para las cifras. La firma es la regla: 2 px de
 tinta encima de cada fila y filetes de 1 px separando las cadenas, como una tabla de periódico. El
@@ -176,6 +191,7 @@ histórico de precios.
 | `POST /api/items/{id}/anchor` | `{"store":"dia","id":"…"}`: cambia la base y recalcula sin gastar cuota |
 | `POST /api/items/{id}/retry` · `POST /api/retry` | reintenta lo que falló por cuota o red |
 | `POST /api/recompute` | vuelve a juzgar lo guardado con las reglas actuales, sin red |
+| `POST /api/stores` | `{"chains":["dia","mas"]}`: qué supermercados entran en la comparativa |
 
 Enlaces directos: `/?tienda=dia` abre la lista de esa cadena y `/?buscar=huevos` abre el buscador.
 

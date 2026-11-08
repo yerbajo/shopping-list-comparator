@@ -22,6 +22,12 @@ unidad con aviso de formato.
 - **S6** — Se mantiene la regla de la casa: **un binario, sin CDN y sin build**. Las fuentes se
   autoalojan embebidas (subset latin + latin-ext, 168 KB); la UI se construye con nodos y
   `textContent`; el nivel de equivalencia se declara con una palabra y nunca se inventa un precio.
+- **S8** — «quiero que los supermercados donde se generarán las listas sea un conjunto seleccionable ya
+  que es posible que no dispongas del mismo en tu ciudad o no te guste su calidad, etc. Asi que debe
+  poder seleccionarse en que supermercado quieres la comparativa de cesta»: la selección de cadenas
+  es un ajuste persistente que decide **qué se consulta, qué celdas hay y qué cestas se generan**. Un
+  supermercado fuera de la selección no gasta su cuota, no aparece en la comparativa y no puede ser la
+  base de un producto nuevo. Debe quedar al menos uno.
 - **S7** — «investiga componentes para realizar webs atractivas»: se evaluaron las opciones del mercado
   y se descartó adoptar una librería. Motivo registrado en L2.
 
@@ -35,6 +41,7 @@ unidad con aviso de formato.
 | T4 | S5 | €/unidad desde la cadena y aviso de formato en la celda | `feat(ui): €/unidad y aviso de formato` |
 | T5 | S4 | Modo compra con casillas, impresión, copia y enlace directo | `feat(ui): lista para la tienda, imprimible y copiable` |
 | T6 | S6, S7 | `POST /api/recompute`, pruebas nuevas, README y capturas | `docs: interfaz y funciones nuevas` |
+| T7 | S8 | Selección persistente de cadenas en modelo, `POST /api/stores`, filtro de celdas y cestas, selector con logos | `feat(cestas): elegir en qué supermercados se compara` |
 
 ## Log
 
@@ -62,3 +69,14 @@ unidad con aviso de formato.
   productos guardados **sin gastar cuota**. Verificado sobre la lista real de cinco productos.
 - **L7** (decisión): el buscador ordena los productos de cada cadena con la marca propia primero y el
   precio después; una estantería no se lee en el orden en que la cadena la devuelve.
+- **L8** (usuario, verbatim): «quiero que los supermercados donde se generarán las listas sea un
+  conjunto seleccionable ya que es posible que no dispongas del mismo en tu ciudad o no te guste su
+  calidad, etc. Asi que debe poder seleccionarse en que supermercado quieres la comparativa de cesta».
+  Decisión: la selección es un ajuste guardado en la lista (`chains` en el JSON, vacío = todas), el
+  resolver sólo pregunta a las elegidas y el servidor sólo construye celdas y cestas para ellas. Al
+  volver a activar una cadena se piden únicamente los productos que nunca la consultaron: no se
+  re-resuelve lo que ya tenía respuesta. El selector usa los logos de S5/S8 y deja al menos una cadena.
+- **L9** (defecto encontrado en la captura del selector): `aria-pressed` no se aplicaba porque el
+  helper `el()` asignaba las claves `aria-*` como propiedades del nodo y no como atributos; el mismo
+  fallo dejaba sin nombre accesible el botón de cada cesta. Corregido en un solo sitio (`setAttribute`
+  para `data-*` y `aria-*`).
