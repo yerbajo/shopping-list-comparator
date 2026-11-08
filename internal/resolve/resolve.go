@@ -137,7 +137,8 @@ func (r *Resolver) Resolve(ctx context.Context, id string) error {
 	}
 	_, _ = r.Store.Update(id, func(i *store.Item) { i.Resolving = true; i.Error = "" })
 
-	reply, err := r.Search.Search(ctx, item.Query, r.limit(), nil)
+	chains := catalog.Selected(r.Store.Selected())
+	reply, err := r.Search.Search(ctx, item.Query, r.limit(), chains)
 	r.setLastError(errText(err))
 	if err != nil {
 		_, _ = r.Store.Update(id, func(i *store.Item) {
@@ -184,7 +185,7 @@ func (r *Resolver) Resolve(ctx context.Context, id string) error {
 
 	matches := make([]identity.Match, 0, len(catalog.Stores))
 	cands := make([]identity.Product, 0, len(catalog.Stores)*r.keep())
-	for _, chain := range catalog.Stores {
+	for _, chain := range chains {
 		hits := byStore[chain]
 		if len(hits) == 0 {
 			continue

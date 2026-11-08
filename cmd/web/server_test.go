@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,12 +20,17 @@ import (
 )
 
 type fakeSearch struct {
-	reply catalog.Reply
-	calls int
+	mu     sync.Mutex
+	reply  catalog.Reply
+	calls  int
+	stores []string
 }
 
-func (f *fakeSearch) Search(context.Context, string, int, []string) (catalog.Reply, error) {
+func (f *fakeSearch) Search(_ context.Context, _ string, _ int, stores []string) (catalog.Reply, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.calls++
+	f.stores = append([]string(nil), stores...)
 	return f.reply, nil
 }
 
@@ -427,6 +433,103 @@ func TestPatchQuantityAndSection(t *testing.T) {
 	for _, bad := range []map[string]any{{"quantity": 0}, {"quantity": 100}, {"section": "garaje"}} {
 		if resp, _, _ := call(t, ts, http.MethodPatch, "/api/items/"+id, bad); resp.StatusCode != http.StatusBadRequest {
 			t.Errorf("%v: got %s, want 400", bad, resp.Status)
+		}
+	}
+}
+
+func TestStoreSelectionDrivesSearchCellsAndBaskets(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "list.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	search := &fakeSearch{reply: milkReply()}
+	r := resolve.New(search, st)
+	r.Gap = 0
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	r.Start(ctx)
+	srv := &server{o: options{store: st, resolver: r, searcher: search, assets: web.FS, engine: "http://engine.test"}}
+	ts := httptest.NewServer(srv.handler())
+	t.Cleanup(ts.Close)
+
+	// By default every chain is in play.
+	_, doc, _ := call(t, ts, http.MethodPost, "/api/items", map[string]string{"query": "leche entera"})
+	if len(doc.Stores) != 7 || len(doc.Carts) != 7 {
+		t.Fatalf("default: %d stores, %d baskets", len(doc.Stores), len(doc.Carts))
+	}
+
+	// Leaving two of them changes the cells, the baskets and what the engine is asked.
+	_, doc, payload := call(t, ts, http.MethodPost, "/api/stores", map[string]any{"chains": []string{"dia", "mas"}})
+	if len(doc.Carts) != 2 || doc.Carts[0].Store != "dia" || doc.Carts[1].Store != "mas" {
+		t.Fatalf("baskets: %+v (%s)", doc.Carts, payload)
+	}
+	for _, ref := range doc.Stores {
+		want := ref.Store == "dia" || ref.Store == "mas"
+		if ref.Selected != want {
+			t.Errorf("%s: selected=%v, want %v", ref.Store, ref.Selected, want)
+		}
+	}
+	doc = waitResolved(t, ts)
+	for _, item := range doc.Items {
+		if len(item.Cells) != 2 {
+			t.Errorf("%s: %d cells, want one per chosen chain", item.Query, len(item.Cells))
+		}
+	}
+
+	// A product added now is asked only to the chosen chains: that is the quota saving.
+	search.mu.Lock()
+	search.stores = nil
+	search.mu.Unlock()
+	call(t, ts, http.MethodPost, "/api/items", map[string]string{"query": "pan de molde"})
+	waitAll(t, ts)
+	search.mu.Lock()
+	asked := append([]string(nil), search.stores...)
+	search.mu.Unlock()
+	if len(asked) != 2 || asked[0] != "dia" || asked[1] != "mas" {
+		t.Errorf("the engine was asked for %v, want the two chosen chains", asked)
+	}
+
+	// Re-enabling a chain asks only for what was never answered.
+	_, doc, _ = call(t, ts, http.MethodPost, "/api/stores", map[string]any{"chains": []string{"dia", "mas", "aldi"}})
+	if len(doc.Carts) != 3 {
+		t.Fatalf("baskets after re-enabling: %+v", doc.Carts)
+	}
+
+	// The selection survives a restart.
+	if got := st.Selected(); len(got) != 3 {
+		t.Errorf("stored selection: %v", got)
+	}
+}
+
+// waitAll waits until no item is resolving.
+func waitAll(t *testing.T, ts *httptest.Server) stateDoc {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		_, doc, _ := call(t, ts, http.MethodGet, "/api/state", nil)
+		busy := false
+		for _, it := range doc.Items {
+			if it.Resolving {
+				busy = true
+			}
+		}
+		if !busy && len(doc.Items) > 0 {
+			return doc
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("items never stopped resolving")
+	return stateDoc{}
+}
+
+func TestStoreSelectionRejectsEmptyAndUnknown(t *testing.T) {
+	ts, _, _ := newTest(t)
+	for _, body := range []map[string]any{
+		{"chains": []string{}},
+		{"chains": []string{"dia", "eroski"}},
+	} {
+		if resp, _, _ := call(t, ts, http.MethodPost, "/api/stores", body); resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("%v: got %s, want 400", body, resp.Status)
 		}
 	}
 }

@@ -73,11 +73,12 @@ func (s *server) handler() http.Handler {
 	mux.HandleFunc("POST /api/items/{id}/retry", s.handleRetry)
 	mux.HandleFunc("POST /api/retry", s.handleRetryAll)
 	mux.HandleFunc("POST /api/recompute", s.handleRecompute)
+	mux.HandleFunc("POST /api/stores", s.handleStores)
 	if s.o.assets != nil {
 		files := http.FileServerFS(s.o.assets)
 		// Only the embedded paths are served: a catch-all GET would shadow the 405 that
 		// ServeMux answers for a wrong verb on /api/items.
-		for _, path := range []string{"/{$}", "/styles.css", "/app.js", "/fonts/{name}"} {
+		for _, path := range []string{"/{$}", "/styles.css", "/app.js", "/logos.svg", "/fonts/{name}"} {
 			mux.Handle("GET "+path, files)
 		}
 	}
@@ -87,8 +88,9 @@ func (s *server) handler() http.Handler {
 // ---------- documents ----------
 
 type storeRef struct {
-	Store string `json:"store"`
-	Label string `json:"label"`
+	Store    string `json:"store"`
+	Label    string `json:"label"`
+	Selected bool   `json:"selected"`
 }
 
 type sectionRef struct {
@@ -163,25 +165,28 @@ type stateDoc struct {
 // failure are three different things and the UI needs all three.
 func (s *server) state() stateDoc {
 	snap := s.o.store.Snapshot()
+	sel := catalog.Selected(s.o.store.Selected())
 	doc := stateDoc{
 		Reachable: s.o.resolver.LastError() == "",
 		Engine:    s.o.engine,
 		Stores:    make([]storeRef, 0, len(catalog.Stores)),
 		Items:     make([]itemView, 0, len(snap.Items)),
-		Carts:     make([]cartView, 0, len(catalog.Stores)),
+		Carts:     make([]cartView, 0, len(sel)),
 	}
 	for _, chain := range catalog.Stores {
-		doc.Stores = append(doc.Stores, storeRef{Store: chain, Label: labels[chain]})
+		doc.Stores = append(doc.Stores, storeRef{
+			Store: chain, Label: labels[chain], Selected: catalog.Contains(sel, chain),
+		})
 	}
 	for _, section := range identity.Sections() {
 		doc.Sections = append(doc.Sections, sectionRef{Key: section, Label: identity.SectionLabel(section)})
 	}
 
 	for _, it := range snap.Items {
-		doc.Items = append(doc.Items, s.itemView(it))
+		doc.Items = append(doc.Items, s.itemView(it, sel))
 	}
 
-	for _, chain := range catalog.Stores {
+	for _, chain := range sel {
 		cart := cartView{Store: chain, Label: labels[chain], Items: len(snap.Items),
 			Lines: []cartLine{}, Missing: []string{}}
 		for _, it := range snap.Items {
@@ -210,14 +215,14 @@ func (s *server) state() stateDoc {
 	return doc
 }
 
-func (s *server) itemView(it store.Item) itemView {
+func (s *server) itemView(it store.Item, sel []string) itemView {
 	qty := it.Quantity
 	if qty < 1 {
 		qty = 1
 	}
 	v := itemView{ID: it.ID, Query: it.Query, Quantity: qty, Section: sectionOf(it),
 		Anchor: it.Anchor, Resolving: it.Resolving, Error: it.Error}
-	for _, chain := range catalog.Stores {
+	for _, chain := range sel {
 		c := cellView{Store: chain}
 		code := it.Status[chain]
 		m, has := matchOf(it, chain)
@@ -469,7 +474,7 @@ func (s *server) picker(ctx context.Context, query string) (pickerDoc, error) {
 	if search == nil {
 		search = catalog.New(s.o.engine)
 	}
-	reply, err := search.Search(ctx, query, pickerLimit, nil)
+	reply, err := search.Search(ctx, query, pickerLimit, catalog.Selected(s.o.store.Selected()))
 	if err != nil {
 		return pickerDoc{}, err
 	}
@@ -518,6 +523,50 @@ func (s *server) picker(ctx context.Context, query string) (pickerDoc, error) {
 	s.cache[query] = cachedSearch{at: now, doc: doc}
 	s.mu.Unlock()
 	return doc, nil
+}
+
+// handleStores keeps the supermarkets the shopper actually uses. It is the only setting that
+// changes what the app asks: a chain left out is not queried (so it spends no quota), has no cell
+// and has no basket. Turning one back on asks for it only in the items that never got an answer.
+func (s *server) handleStores(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Chains []string `json:"chains"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	if len(body.Chains) == 0 {
+		writeError(w, http.StatusBadRequest, "deja al menos un supermercado")
+		return
+	}
+	for _, chain := range body.Chains {
+		if !catalog.Known(chain) {
+			writeError(w, http.StatusBadRequest, "ese supermercado no existe: "+chain)
+			return
+		}
+	}
+	before := catalog.Selected(s.o.store.Selected())
+	after := catalog.Selected(body.Chains)
+	if err := s.o.store.SetSelected(after); err != nil {
+		writeError(w, http.StatusInternalServerError, "no se pudo guardar la lista")
+		return
+	}
+	for _, it := range s.o.store.Snapshot().Items {
+		if it.ResolvedAt == nil {
+			s.o.resolver.Enqueue(it.ID)
+			continue
+		}
+		for _, chain := range after {
+			if catalog.Contains(before, chain) {
+				continue
+			}
+			if _, asked := it.Status[chain]; !asked {
+				s.o.resolver.Enqueue(it.ID)
+				break
+			}
+		}
+	}
+	writeJSON(w, http.StatusOK, s.state())
 }
 
 // handlePatch changes what belongs to the shopper: how many, and which aisle.

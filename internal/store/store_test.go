@@ -95,3 +95,31 @@ func TestOpenRefusesABrokenDocument(t *testing.T) {
 		t.Fatal("a corrupt list must be reported, never silently replaced")
 	}
 }
+
+func TestSelectedChainsPersist(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "list.json")
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Selected(); len(got) != 0 {
+		t.Errorf("a new list has no selection: %v", got)
+	}
+	if err := s.SetSelected([]string{"dia", "mas"}); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := again.Selected()
+	if len(got) != 2 || got[0] != "dia" || got[1] != "mas" {
+		t.Errorf("selection not persisted: %v", got)
+	}
+	if err := again.SetSelected(nil); err != nil {
+		t.Fatal(err)
+	}
+	if len(again.Selected()) != 0 {
+		t.Error("clearing the selection must persist too")
+	}
+}

@@ -24,6 +24,51 @@ import (
 // Stores are the chains the engine serves, in the order the app shows them.
 var Stores = []string{"dia", "mercadona", "mas", "aldi", "lidl", "carrefour", "alcampo"}
 
+// Known reports whether a name is one of the chains the engine serves.
+func Known(store string) bool {
+	for _, s := range Stores {
+		if s == store {
+			return true
+		}
+	}
+	return false
+}
+
+// Selected normalises the shopper's chains: an empty selection means every chain (the behaviour a
+// list had before the choice existed), duplicates collapse, and the order is the app's own so the
+// grid and the baskets never depend on the order a file happens to have.
+func Selected(chosen []string) []string {
+	if len(chosen) == 0 {
+		return append([]string(nil), Stores...)
+	}
+	want := make(map[string]bool, len(chosen))
+	for _, s := range chosen {
+		if Known(s) {
+			want[s] = true
+		}
+	}
+	if len(want) == 0 {
+		return append([]string(nil), Stores...)
+	}
+	out := make([]string, 0, len(want))
+	for _, s := range Stores {
+		if want[s] {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// Contains reports whether a chain is part of a selection.
+func Contains(selection []string, store string) bool {
+	for _, s := range selection {
+		if s == store {
+			return true
+		}
+	}
+	return false
+}
+
 // Error is one chain's failure, with the stable code the engine already publishes.
 type Error struct {
 	Code      string `json:"code"`

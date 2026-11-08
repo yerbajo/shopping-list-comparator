@@ -45,9 +45,11 @@ type Item struct {
 	Error      string            `json:"error,omitempty"`
 }
 
-// State is the whole document.
+// State is the whole document. Chains is the shopper's selection: the supermarkets they actually
+// use, which are the only ones asked and the only ones a basket exists for. Empty means every chain.
 type State struct {
-	Items []Item `json:"items"`
+	Chains []string `json:"chains,omitempty"`
+	Items  []Item   `json:"items"`
 }
 
 // Store is the list, safe for concurrent use.
@@ -91,6 +93,26 @@ func (s *Store) Snapshot() State {
 	out := State{Items: make([]Item, len(s.state.Items))}
 	copy(out.Items, s.state.Items)
 	return out
+}
+
+// Selected returns the chains the shopper chose, as stored (possibly empty, which means all).
+func (s *Store) Selected() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.state.Chains...)
+}
+
+// SetSelected stores the chosen chains.
+func (s *Store) SetSelected(chains []string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	before := s.state.Chains
+	s.state.Chains = append([]string(nil), chains...)
+	if err := s.saveLocked(); err != nil {
+		s.state.Chains = before
+		return err
+	}
+	return nil
 }
 
 // Get returns one item.

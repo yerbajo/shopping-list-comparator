@@ -204,3 +204,35 @@ func TestAddStorageFailureIsAServerError(t *testing.T) {
 		t.Errorf("the 500 leaks the storage path: %s", body)
 	}
 }
+
+// A basket row is identified by its chain's mark: every chain the app serves needs its symbol,
+// and the sprite has to parse as standalone SVG because it is injected into the page.
+func TestEveryChainHasItsMarkInTheSprite(t *testing.T) {
+	sprite, err := web.FS.ReadFile("logos.svg")
+	if err != nil {
+		t.Fatalf("logos.svg is not embedded: %v", err)
+	}
+	if !strings.Contains(string(sprite), `xmlns="http://www.w3.org/2000/svg"`) {
+		t.Error("logos.svg needs the SVG namespace to be parsed on its own")
+	}
+	for _, chain := range catalog.Stores {
+		// A symbol without its own viewBox is clipped by its viewport: the marks were cut in half
+		// before each one carried the box of its own drawing.
+		pattern := regexp.MustCompile(`<symbol id="logo-` + chain + `"[^>]*viewBox="[^"]+"`)
+		if !pattern.Match(sprite) {
+			t.Errorf("logos.svg has no cropped symbol for %s", chain)
+		}
+	}
+	js, err := web.FS.ReadFile("app.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, hook := range []string{"#logo-${store}", "DOMParser", "loadLogos"} {
+		if !strings.Contains(string(js), hook) {
+			t.Errorf("web/app.js lost %s, so the baskets would fall back to a dot", hook)
+		}
+	}
+	if strings.Contains(string(js), "innerHTML") {
+		t.Error("the sprite must be imported as parsed SVG, never assigned as HTML")
+	}
+}

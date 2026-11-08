@@ -85,3 +85,39 @@ func TestCents(t *testing.T) {
 		}
 	}
 }
+
+func TestSelectedNormalisesTheShoppersChains(t *testing.T) {
+	all := Selected(nil)
+	if len(all) != len(Stores) {
+		t.Fatalf("an empty selection means every chain: got %v", all)
+	}
+	cases := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{"canonical order", []string{"mas", "dia"}, []string{"dia", "mas"}},
+		{"duplicates collapse", []string{"dia", "dia", "mas"}, []string{"dia", "mas"}},
+		{"unknown dropped", []string{"dia", "eroski"}, []string{"dia"}},
+		{"all unknown falls back to all", []string{"eroski"}, Stores},
+	}
+	for _, c := range cases {
+		got := Selected(c.in)
+		if len(got) != len(c.want) {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != c.want[i] {
+				t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+				break
+			}
+		}
+	}
+	if !Known("dia") || Known("eroski") {
+		t.Error("Known must answer for the seven chains only")
+	}
+	if !Contains([]string{"dia", "mas"}, "mas") || Contains([]string{"dia"}, "mas") {
+		t.Error("Contains is wrong")
+	}
+}
